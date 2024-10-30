@@ -1,6 +1,6 @@
 ---
-title: "Graded Homework"
-author: "Jack O'Connell (22336046)"
+title: "Probability Assignment"
+author: "Jack O'Connell"
 output: pdf_document
 date: "`r Sys.Date()`"
 editor_options: 

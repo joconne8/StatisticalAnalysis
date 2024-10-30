@@ -1,0 +1,646 @@
+---
+title: "Graded Homework"
+author: "Jack O'Connell (22336046)"
+output: pdf_document
+date: "`r Sys.Date()`"
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, include = TRUE)
+
+# Ensure environment is empty 
+rm(list=ls())
+```
+
+# Background
+
+This assignment is weighted as 30% of your module mark.
+
+**DEADLINE**: Thursday the 17th of October 2024 at midnight Irish time.
+This is a \textbf{hard} deadline.
+
+**SUBMISSIONS**: Your final program files (see the first point in the instructions on how the submission should look like) should be submitted as an attachment by email to [fritzc\@tcd.ie](mailto:fritzc@tcd.ie){.email}.
+
+**INSTRUCTIONS**:
+
+-   You are required to submit
+-   a single .Rmd file with your code and answers to the questions
+-   a single .pdf file generated from your .Rmd file
+- **For failing to upload either one of two files or submitting just an R script, you will be deduced 5 points**
+-   Naming convention:
+-   Rmd file: $\text{HW<NAME WITH NO SPACES>.<YOURSTUDENTNUMBER>.Rmd}$
+-   PDF file: $\text{HW<NAME WITH NO SPACES>.<YOURSTUDENTNUMBER>.pdf}$
+-   Make sure to run your code starting with an empty environment (run the code $\mathtt{rm(list = ls())}$ to empty your environment) and to include all the necessary libraries in your code. Thereby, the code will be self-contained and can be run without any additional steps. 
+- Write all of your code in the provided code chunks and make sure to save regularly so as not to lose your work. **To make all code visible, set the options for all code chunks as follows: echo = TRUE,include = TRUE**. 
+-   Remember to comment your code clearly to explain what you are doing. Comment every line of the code and explain yourself.
+-   The homework consists of 2 parts. Please start a new section for each problem. My advice is to use the provided template and fill in the blanks with code and text.
+-   Much of the homework is based on pseudo random number generation. Set the seed at the beginning of each code chunk to ensure reproducibility. **Set the seed to your student number. Else you will get 2 points deduced.**
+-   The homework is graded based on the correctness of the code and the clarity of the explanations.
+-   Points are provided for each part of the problem to tell you how much each part is worth. The total number of points for each problem is provided at the beginning of each problem.
+
+# Part 1: Sampling from Distributions (27 Points)
+
+-   With the help of "inversion sampling", we can transform random variables generated from a uniform distribution into random variables from other distributions.
+-   One way to uniquely describe the distribution of a random variable $X$ is by its cumulative distribution function (CDF), given by $F(x) = P(X \leq x)$.
+-   Obtaining samples $X$ from a distribution with CDF $F$ is done by generating a random variable $U$ from a uniform distribution and then applying the inverse of the CDF $F^{-1}$ to $U$.
+
+Put differently, the steps for inversion sampling are as follows:
+
+1.  Sample $U$ from a uniform distribution on $[0,1]$.
+2.  Compute $X = F^{-1}(U)$.
+
+$X$ will have the distribution with CDF $F$.
+In this exercise, you will write a function that samples via "inversion sampling" random variables from a distribution with any density $f(x)$.
+To apply "inversion sampling", we need to approximate the inverse CDF ($F^{-1}(x)$) from the density $f(x)$ on some grid.
+For a density function `density_x` ($f(x)$) and a grid `approx_grid`, we approximate the inverse CDF ($F^{-1}(x)$) as follows:
+
+
+```{r, echo = TRUE,include = TRUE}
+get_approximate_inverse_cdf <- function(density_x, approx_grid){
+  # Approximate the cumulative distribution with the integrate function
+  approx_cdf <- function(x, ...){
+    integrate(density_x, lower = -Inf, upper = x)$value   
+  }
+  # Compute values for the values on the provided grid
+  cdf_vals <- sapply(X = approx_grid, approx_cdf,simplify = FALSE)
+  # Approximate the inverse CDF function using interpolation
+  # The warning are only supressed because you do not need to worry about them
+  inverse_cdf <- suppressWarnings(approxfun(cdf_vals, approx_grid))
+}
+# This is an example application of the function: 
+# First, define the density (f(x)) of which we want to 
+# approximate the inverse CDF (F^{-1}(x)) of.
+density_x <- function(x) dnorm(x, mean = 0, sd = 2)
+# Second, define a grid that should cover most of the 
+# probability mass of the density. For instance, most of the probability mass 
+# of a standard Gaussian density is between -10 and 10.
+approx_grid <- seq(-10, 10, length.out = 1000)
+# Third, apply the provided function!
+# The result will be a function approximating the inverse CDF of the density.
+approximate_inverse_cdf <- get_approximate_inverse_cdf(density_x, approx_grid)
+```
+
+
+First, we approximate the CDF of the density function on the grid `approx_grid` using the `integrate` function.
+Second, we approximate the inverse CDF function using the `approxfun` function.
+
+## 1.1: Test the approximation (7 Points)
+
+-   Try to use the function `get_approximate_inverse_cdf` for the Exponential density function with $\mathtt{rate = 5}$ with a suitable grid `approx_grid` covering most probability mass of the density.
+
+-   For this example, the exact inverse CDF function is $F^{-1}(x) = -\log(1-x)/5$.
+
+-   Plot the approximate and exact inverse CDF functions in the same plot using the $\mathtt{lines}$ function (the approximate inverse CDF should be drawn in black and the exact inverse CDF in your preferred tone of red).
+
+- Add a legend to the plot to the top right corner with the labels "Approximate" and "Exact".
+
+```{r part_1_1}
+# Set seed for reproducibility
+set.seed(22336046)
+# Define exponential density function with rate parameter = 5
+rate<- 5 
+# Use in-built density exponential function 
+exp_function <- function(x) dexp(x, rate = rate)
+
+# approximate a grid for the exponential distribution 
+# I chose a grid of this size becasue ... 
+approx_exp_grid <- seq(0, 5/rate, length.out = 1000 )
+
+# Use the approx inverse cdf function to find an approximate inverse cdf function 
+approx_inverse_exp_cdf <- get_approximate_inverse_cdf(exp_function, approx_exp_grid)
+
+# Define the actual inverse exp cdf function (given)
+inverse_exp <- function(x) -1*log(1-x)/5
+
+# Plot the inverse exp cdf and the approximate inverse exp cdf on a graph 
+# Note that we will use probabilities (0< x < 1) for our x values for the cdf 
+# as the y values for the exp density function pdf lie between 0 and 1
+
+# Define probabilities between interval 0 < f(x) < 1 
+# Use seq function but alternatively could have used runif(0,1) with a large no of values
+probabilities <- seq(0, 0.999999, length.out = 1000)
+
+# Obtain the inverse cdf y-axis values for plotting
+# approximate inverse cdf 
+y_vals <-approx_inverse_exp_cdf(probabilities)
+# actual inverse cdf values 
+exact_vals <- inverse_exp(probabilities)
+
+# Plot the values and overlay using lines function 
+plot(x=probabilities, y = y_vals, type ="l", col = 'black', 
+     xlab = "Probabilities", ylab = "Values", main = "Approximate vs Exact Inverse 
+     Exponential CDF")
+# Overlay exact inverse CDF
+lines(x=probabilities, y = exact_vals, col = '#a61c07')
+# Adding a legend
+legend("topright", legend = c("Approximate", "Exact"), col = c("black", "#a61c07"), 
+       lty =1, lwd =2)
+
+# PLOTTING THE FUNCTIONS SIDE BY SIDE 
+
+# To keep plotting region the same after the change in layout 
+par_old <- par(no.readonly = TRUE)
+
+# Set the 1 x 2 grid and parameter values
+par(mfrow = c(1, 2), mar = c(8, 3, 5,2))
+
+# Define vectors of variables 
+Names <- c("Approx.", "Exact")
+y_value_axis <- list(y_vals, exact_vals)
+cols <- c("black", "#a61c07")
+
+for(i in 1:length(Names)){
+  
+  #Plot the graphs side by side changing the label, values and colour scheme
+  plot(x=probabilities, y = y_value_axis[[i]], type ="l", col = cols[i], 
+     xlab = "Probabilities", ylab = paste(Names[i], "Values"), main = paste(Names[i], 
+          "Inverse Exponential CDF"))
+  
+}
+
+# Based off of these 2 plots, it can be concluded that the approximation function 
+# exhibits similar behaviour to the actual inverse CDF 
+
+# Return par to original settings
+par(par_old)
+
+
+```
+
+## 1.2: Implement Inversion Sampling (6 Points)
+
+-   Implement the inversion sample method as detailed above in a function `inversion_sample_from_density`.
+
+- This function takes as arguments a density function (`density_x`), the number of samples (`n`), and the grid based on which the inverse CDF should be approximated (`approx_grid`).
+
+-   The function `density_x` should be a function that takes a single argument and returns the density of the distribution at that point.
+
+```{r part_1_2}
+# Set seed for reproducibility
+set.seed(22336046)
+
+# Define a generic density function that takes an argument 'x' and will return the density of a specified
+# distribution at that point 
+
+# NOTE COULD HAVE USED PARAMS AND A LIST INSTEAD OF LABELLING THEM ALL ... 
+density_x <- function(x, dist ="normal", mean =0, sd=1, rate = 1, lambda = 1, 
+                      shape1 = 1, shape2 = 2){
+  
+  # Error handling: specify if x is a vector or a scalar quantity 
+  # If x is a vector, use sapply function 
+  
+  if (length(x) > 1) {
+    return(sapply(x, function(x_val) {
+      if (dist == "normal") {
+        return(dnorm(x_val, mean, sd))
+      } else if (dist == "exponential") {
+        return(dexp(x_val, rate))
+      } else if (dist == "poisson") {
+        return(dpois(x_val, lambda))
+      } else if (dist == "beta") {
+        return(dbeta(x_val, shape1 = shape1, shape2 = shape2))
+      } else {
+        stop("Please input a defined probability density function")
+      }
+    }))
+  }else {
+    # If x is a scalar 
+    
+    if (dist == "normal"){
+      return (dnorm(x, mean, sd))
+    }
+    else if(dist == "exponential"){
+      return (dexp(x, rate))
+    }
+    else if(dist == "poisson"){
+      return (dpois(x,lambda))
+      
+    }
+    else if (dist == "beta"){
+      return (dbeta(x,shape1 = shape1, shape2 =shape2 ))
+    }else{
+      print("please input a defined probability density function")
+    }
+  }
+}
+
+# Implement the inversion sampling function 
+inversion_sample_from_density <- function(density_x, n, approx_grid){
+  
+  # Sample U values from a Uniform distribution on [0,1]
+  random_unif_vals <- runif(n,min=0, max=1 )
+  
+  # Use the predefined generic inverse cdf function for our input
+  inverse_cdf <- get_approximate_inverse_cdf(density_x, approx_grid = approx_grid)
+  
+  # Compute X values for F^-1(U) for our distribution
+  inverse_cdf_vals <- inverse_cdf(random_unif_vals)
+  
+  # return density of the distribution 
+  return (inverse_cdf_vals)
+}
+
+# Conclusion using inverse sampling with U = (u1, u2 ... un) we can calculate the value 
+# of the CDF of a specified distribution X = (x1, x2, ...xn)
+
+
+
+```
+
+## 1.3: Use Inversion Sampling (9 Points)
+
+Try the function from Part 1.2 out for the following density functions:
+
+-   Gaussian density function with $\mu = 1$ and $\sigma = 1$.
+-   Exponential density function with $\mathtt{rate = 5}$.
+-   Beta density function with $\mathtt{shape1 = 1}$ and $\mathtt{shape2 = 2}$.
+
+Sample 1000 random variables from each of the densities and save the samples in three separate vectors.
+
+```{r part_1_3}
+# Set seed for reproducibility
+set.seed(22336046)
+
+# Implement inversion sampling for specified density functions: normal, exponential
+# and beta with given parameters 
+
+# Make use of density_x function from Part 1.2 to do define these examples
+
+# Gaussian density function 
+gaussian_fn <- function(x) density_x(x, dist ="normal", mean =1, sd=1)
+# Exponential density function 
+rate<- 5
+exp_fn <- function(x) density_x(x, dist = "exponential", rate = rate)
+# Beta density function 
+beta_fn <- function(x) density_x(x, dist = "beta", shape1=1, shape2=2)
+
+# Define the grids for the distributions
+# Normal distribution is defined on a grid -10 < x < 10
+gaussian_grid <- seq(-10, 10, length.out = 1000)
+# Exponential distribution is defined as x > 0 due to its definition 
+# f(x) = 0 if x<0, f(x) = lambdae^(-lambda*x) for x>= 0 [could use latex for ]
+exp_grid <- seq(0, 5 / rate, length.out =1000)
+# Beta distibution is only defined for 0 < x < 1 (between 0 and 1)
+beta_grid <- seq(0,1, length.out = 1000)
+
+
+# Apply inversion sampling to each of the densities using appropriate grids 
+# Using normal example
+normal_samples <- inversion_sample_from_density(density_x = gaussian_fn, n = 1000, 
+                                                approx_grid = gaussian_grid)
+
+# Using Exponential dist example
+exp_samples<- inversion_sample_from_density(density_x = exp_fn, n = 1000, 
+                                            approx_grid = exp_grid)
+
+# Using beta dist example
+beta_samples <- inversion_sample_from_density(density_x = beta_fn, n = 1000, 
+                                              approx_grid = beta_grid)
+
+# Visualising the results from the inverison sampling using a histogram
+# Use no of bins (breaks) = 30 as is a larger sample size n >= 1000
+
+#plot a histogram of the Normal samples
+hist(normal_samples, breaks = 30, main = "Gaussian (Normal) Distribution Histogram", 
+     xlab = "Normal samples", ylab = "Frequency", col = "lightgreen", border= "black" )
+
+# Plot a histogram of the Exponential samples
+hist(exp_samples, breaks = 30, main = "Exponential Distribution Histogram", 
+     xlab = "Exponential samples", ylab = "Frequency", col = "lightgreen", 
+    border= "black" )
+
+# Plot a histogram of the Beta samples
+hist(beta_samples, breaks = 30, main = "Beta Distribution Histogram", 
+     xlab = "Beta samples", ylab = "Frequency", col = "lightgreen", border= "black" )
+
+# OPTIMIZATION 
+# The code above is repetitive - instead we could iterate  that produces a histogram
+# from the relevant sample. To achieve this matrix structure is used related 
+# distribution name and sample values together to make the above output more efficient
+
+# We can also add an overlay of the relevant theoretical distributions using the curve
+# in built R function 
+# In order to do this we must normalize the area under the curve to 1 using the 
+# 'prob = TRUE' parameter in the historgram hist() function 
+
+# Note the use of list here as the samples all refer to a vector of x values 
+samples <- list(normal_samples, exp_samples, beta_samples)
+
+# Corresponding functions 
+# Use list here as this is a list of function objects 
+pdf_functions <- list(gaussian_fn, exp_fn, beta_fn)
+
+# Corresponding distribution names 
+# Use of c as vector of simple strings
+dist_names <- c("Normal", "Exponential", "Beta")
+
+# Loop through each histogram and plot
+for(i in seq_along(samples)){
+  
+  fn <- pdf_functions[[i]]
+  
+  hist(samples[[i]], breaks =30, prob = T, main = paste(dist_names[i], 
+                                                        "Distribution Histogram"), 
+       xlab = paste(dist_names[i], "Samples"), ylab = "Density", col = "cyan", 
+       border = "black") 
+  
+  # Overlay theoretical distributions using samples 
+  curve(fn(x), col = "red", lwd = 2, add =T )
+  legend("topright", legend = c(paste(dist_names[i], "Distribution")), col = c("red"), 
+         lty =1, lwd =2)
+  
+  
+}
+
+```
+
+## 1.4: Compare Inversion Sampling with built-in R Sampling (5 Points)
+
+-   Compare the results with the histogram of the samples generated from the built-in R functions for the Gaussian $\mathtt{rnorm()}$, Exponential $\mathtt{rexp()}$, and Beta distributions $\mathtt{rbeta()}$and comment the results.
+
+-   Plot all results on a $3\times 2$ grid.
+After plotting all the graphs set the graphical parameters back to the old values.
+
+```{r part_1_4}
+# Set seed for reproducibility
+set.seed(22336046)
+
+# Define the in-built random samples 
+# Normal sample using rnorm()
+random_normal_vals <- rnorm(1000, mean = 1, sd = 1)
+# Exponential sample using rexp()
+random_exp_vals <- rexp(1000, rate = 5)
+# Beta sample using rbeta()
+random_beta_vals <- rbeta(1000, shape1 = 1, shape2 = 2)
+
+# Note that we have our values from before being normal_samples, exp_samples, 
+# beta_samples which were obtained using inverse sampling 
+
+# COMPARISON 
+# Will plot all of these graphs using the par() function and a for loop to improve code
+# efficiency and readability 
+# The top row will compare inverse sampling normal sample to an rnorm sample
+# The middle row will compare inverse sampling exponential sample to a rexp sample
+# The bottom row will compare inverse sampling beta sample to a rbeta sample 
+
+
+# Create a list of functions, names, to use in for loop as seen in Part 1.3, now with the addition 
+# of the random normal, random exponential and random beta samples
+
+samples2 <- list(normal_samples, random_normal_vals, exp_samples, random_exp_vals,  beta_samples, random_beta_vals)
+
+# Corresponding distribution names 
+# Use of c as vector of simple strings
+dist_names2 <- c("Normal (Inverse Sampling)", "Normal (rnorm)", "Exponential (Inverse Sampling)",
+                 "Exponential (rexp)", "Beta (Inverse Sampling)", "Beta (rbeta)")
+
+#colours <- c("red", "blue", "orange")
+
+# Set up plotting region using the par function 
+# Save current status of plotting region initially
+par_old <- par(no.readonly = TRUE)
+
+# Create a 3 x 2 grid for the plots 
+# use mar parameter to ensure space for x-axis, y-axis, title and margin on RHS 
+# (can use 4,4,4,4)
+par(mfrow = c(3, 2), mar = c(2, 4,2,3))
+
+colour <- ""
+# Loop through the sample and plot the histogram
+for(i in seq_along(samples2)){
+  
+  
+  # Establish the colour 
+  if(i == 1 ||  i == 2 )
+    colour <- "red"
+      
+  if(i == 3 || i == 4)
+    colour <- "blue"
+      
+  if(i == 5 || i == 6)
+    colour <- "orange"
+      
+  hist(samples2[[i]], breaks =30, main = paste(dist_names2[i], "Distribution Hist."), 
+       xlab = paste(dist_names2[i], "Samples"), ylab = "Frequency", col = colour, 
+       border = "black") 
+}
+
+# Reset plotting region to default original values
+par(par_old)
+
+# RESULTS OF THIS VISUALISATION 
+
+# It is clear to see that for n =1000, there is not much difference in the values 
+# generated using either the in-built R functions or inverse sampling 
+
+# The general shapes of the distributions of the normal, exponential and beta 
+# distributions appear to possess the characteristics of the underlying theoretical 
+# distribution regardless of whether these samples were generated by inverse sampling 
+# or using the in-built R functions rnorm(),rexp() and rbeta()
+
+# Thus, it is arguably more efficient to use the in-biult R functions to generate
+# values following a distribution as both  arrive at the same result, however inverse 
+# sampling is a more complex process and requires more extensive code and does not 
+#appear to be a significantly better method than using in built R functions
+
+```
+
+# Part 2: Monte Carlo Integration (14 Points)
+
+Monte Carlo integration is a method to approximate the integral of a function by sampling uniform random variables from a distribution and computing the average of the function evaluated at the random variables.
+
+The approximation of $\int_a^b f(u) \text{d}u$ is obtained as follows:
+
+1.  Sample $X_1, \ldots, X_n$ with $X_i \overset{iid}{\sim} \text{Uniform}(a,b)$, which is a unfirorm distribution on $[a,b]$.
+2.  Compute the approximation of the integral as $$\int_a^b f(u) \text{d}u \,\approx\, \frac{b-a}{n} \sum_{i=1}^n f(X_i)$$.
+
+## 2.1: Implement Monte Carlo Integration (5 Points)
+
+-   Implement a function `monte_carlo_integration` that takes as arguments the function to be integrated `f`, the number of samples `n`, and the lower and upper bounds of the integral `a` and `b`.
+
+-   Similar to the inversion sampling function, the function `f` should be a function that takes a single argument `x` and returns the value of the function at `x`. Examples are given below.
+
+```{r part_2_1}
+# Set seed for reproducibility
+set.seed(22336046)
+
+monte_carlo_integration <- function(f, n, a, b){
+  
+  # Sample values on the uniform interval [a,b] 
+  X_vals <- runif(n, min = a, max = b)
+  
+  # Approximate integral using Monte Carlo method outlined above 
+  sum_val <- 0
+  for(i in 1:length(X_vals)){
+    
+    sum_val <- sum_val + f(X_vals[i])
+    
+  }
+  
+  # Calculate the result based on the formula   
+  result <- (b-a)/n * (sum_val)
+  return (result)
+}
+
+# Note alternatively could have implemented a vector calculation 
+```
+
+## 2.2: Test your Implementation (2 Points)
+
+Test you function with the following functions with $n = 1000$:
+
+```{r, include = TRUE, echo = TRUE}
+f_1 <- function(x) x^2 # with a = 0, b = 1
+f_2 <- function(x) 1/sqrt(2*pi)*exp(-((x-5)^2)/2) # with a = -20, b = 20
+
+# Set seed for reproducibility
+set.seed(22336046)
+
+# Test Monte Carlo Integration by comparing to actual integration and seeing if the
+# answers are approximately equal to each other 
+
+# FUNCTION 1
+# Define the definite integral 
+a<- 0
+b<- 1
+integral_f1 <- (b)^3 / 3 - (a)^3 / 3
+print(integral_f1)
+
+
+# apply monte carlo integration to f1 for n=1000
+approx_integral_f1 <- monte_carlo_integration(f_1, 1000, a, b)
+print(approx_integral_f1)
+
+
+print(integral_f1 - approx_integral_f1)
+
+
+# Since 0.326699 is approximately equal to 0.3333333, we can conclude that for n=1000, 
+# the Monte Carlo integration method provides an accurate value of the integral of f_1
+
+# FUNCTION 2
+# Define the limits of integration 
+a<- -20
+b<- 20
+
+# Apply the integrate function for f_2 as it is the pdf of a gaussian distribution 
+# with mean = 5 and sd = 1 
+integral_f2 <- integrate(f_2, lower = -20, upper = 20 )$value
+print(integral_f2)
+
+
+# apply monte carlo integration to f_2 for n=1000
+approx_integral_f2 <- monte_carlo_integration(f_2, 1000, a, b)
+print(approx_integral_f2)
+
+
+print(integral_f2 -approx_integral_f2)
+
+# Since1.007673 is approximately equal to 1, we can conclude that for n=1000, 
+# the Monte Carlo integration method provides an accurate value of the integral of f_2
+
+```
+
+Which of the two function is a density and why?
+
+```{r part_2_2}
+# See code above for part 2.2 (Testing Monte Carlo function)
+
+# See markdown text below for answer (function 2 is a density as it is the pdf 
+# of a gaussian (normal) distribution with mu = 5 and sd = 1)
+
+# Can show that for infinity to -infinity the area of pdf (function 2 ) = 1
+# Use a large finite interval to achieve this as Monte Carlo Integration cannot 
+# handle the infinite numbers '-Inf' and 'Inf' as its limits 
+integral_f2 <- integrate(f_2, lower = -Inf, upper = Inf )$value
+print(integral_f2)
+
+# Approximate this using Monte Carlo with one change:
+# Use a large finite interval to achieve this as Monte Carlo Integration cannot 
+# handle the infinite numbers '-Inf' and 'Inf' as its limits 
+approx_integral_f2 <- monte_carlo_integration(f_2, 1000, -20, 20)
+print(approx_integral_f2)
+
+# this gives us a value of 1 and thus function 2 is the density function 
+# Based off an axiom of probability 0 <= p(x) <= 1
+
+```
+
+Text answer: 
+
+Function 2 is a density as it is the pdf of a gaussian (normal) distribution with mu = 5 and sd = 1 (based off the formaula for the pdf of a normal distribution):
+
+$$
+f(x) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(x - \mu)^2}{2\sigma^2}\right)
+$$
+
+When we sub in mu = 5, sd = 1 we get the following:
+
+$$
+f(x) = \frac{1}{\sqrt{2\pi}} \exp\left(-\frac{(x - 5)^2}{2}\right)
+$$
+
+The area (Integral) of a probability density function (pdf) evaluated at limits a = -Inf, b = Inf gives us 1, implying that fucntion 2 is a density function 
+
+Furthermore, a probability density function must give a value between 0 and 1,when integrated f1 ($x^2$) can give a value > 1 and therefore it is not a density function. 
+
+## 2.3: Check the Accuracy of the Approximation as $n$ increases (7 Points)
+
+For $f_1$ ($\mathtt{f\_1}$), the exact value of the integral is $\int_0^1 x^2 \text{d}x = 1/3$.
+
+-   Plot the approximation of the integral for $n = 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 1000$ against the logarithmic number of samples $n$.
+
+-   Add a horizontal red dotted line at the exact value of the integral.
+
+-   Comment in one sentence how well the approximation works with different values of $n$.
+
+```{r part_2_3}
+
+# Set seed for reproducibility
+set.seed(22336046)
+
+# Looking at f1 specifically for b= 1, a=0 [F1(b) - F1(a)]
+
+# Create a visual using the approximation for different values of n 
+# Use logarithmic scale for n for visibility of results on an x axis
+
+# Create a vector of n values 
+n_values <- c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 1000)
+
+# Calculate a logarithmic scale 
+log_n <- log(n_values)
+# Check the values of the logarithmic scale 
+print(log_n)
+
+# Initialise a vector for the integral values (y values for our plot)
+F1_y_vals <- numeric(length(n_values)) 
+
+# Use a for loop to iterate over the sample sizes 
+for(i in 1:length(n_values))
+{
+  F1_y_vals[i] <- monte_carlo_integration(f_1, n_values[i], 0 ,1)
+  
+}
+
+# Plot the data as points, not a line as this is discrete data 
+# The function f1 = x^2 is integrate and evaluated at F1(n) 
+# Scale becomes log(n) to aid visibility 
+plot(log_n, F1_y_vals, main = "Monte Carlo Integration for f1", 
+     xlab = "Logarithmic Sample Size (log(n) )", ylab = "Approximate Integral Value",
+     pch = 16, col = "black")
+
+# Add a horizontal line to the plot denoting the exact value of the integral 
+# evaluated at a = 0 b = 1;  F1(b) - F1(a) = 1/3 
+# Plot this as a horizontal line at y = 1/3
+abline(h = 1/3, col = "red", lty = 2)
+
+# Comment: Answer below in Rmarkdown
+
+```
+
+Text answer: 
+
+The higher the value of n, the better the approximation of the integral becomes; this is due to the Law of Large Numbers and is illustrated in the final data point (n=1000). 
